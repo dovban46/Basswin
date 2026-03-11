@@ -95,7 +95,13 @@ get_header();
 		</div>
 	</section>
 
-	<?php get_template_part( 'template-parts/home-sections' ); ?>
+	<?php
+	ob_start();
+	get_template_part( 'template-parts/home-sections' );
+	$home_sections = ob_get_clean();
+	// Remove possible BOM/leading whitespace before first section.
+	echo ltrim( $home_sections, "\xEF\xBB\xBF\xFEFF \t\n\r\0\x0B" );
+	?>
 </main>
 
 <script>

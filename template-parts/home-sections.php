@@ -1,4 +1,4 @@
-﻿<section class="section_block slider_games container popular">
+<section class="section_block slider_games container popular">
         <div class="header">
             <div class="title_section">
                 <span class="caption">
