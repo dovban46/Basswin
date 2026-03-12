@@ -25,7 +25,6 @@
             </button>
         </section>
 
-                    
 <section class="section_block slider_providers providers">
     <div class="header">
         <div class="title_section">

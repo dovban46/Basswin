@@ -102,6 +102,8 @@ get_header();
 	// Remove possible BOM/leading whitespace before first section.
 	echo ltrim( $home_sections, "\xEF\xBB\xBF\xFEFF \t\n\r\0\x0B" );
 	?>
+
+	<?php get_template_part( 'template-parts/casino-overview' ); ?>
 </main>
 
 <script>
@@ -279,7 +281,10 @@ get_header();
 		setSlide(0);
 		startAutoPlay();
 
-		document.querySelectorAll('.section_block img[data-src]').forEach(function (image) {
+		function loadImageData(image) {
+			if (!image) {
+				return;
+			}
 			var dataSrc = image.getAttribute('data-src');
 			if (!dataSrc) {
 				return;
@@ -289,7 +294,7 @@ get_header();
 			if (!currentSrc || currentSrc.indexOf('/images/null_game_image.png') !== -1) {
 				image.setAttribute('src', dataSrc);
 			}
-		});
+		}
 
 		function initGameSlider(slider) {
 			if (!slider || slider.dataset.sliderInitialized === '1') {
@@ -299,6 +304,7 @@ get_header();
 			var section = slider.closest('.section_block');
 			var track = slider.querySelector('.ds-track');
 			var isFooterProviders = slider.classList.contains('footer_providers');
+			var dsItems = track ? Array.prototype.slice.call(track.querySelectorAll('.ds-item')) : [];
 			var prevNav = slider.querySelector('.ds-prev');
 			var nextNav = slider.querySelector('.ds-next');
 			var headerNavs = section ? section.querySelectorAll('.header .slider_nav') : [];
@@ -344,9 +350,30 @@ get_header();
 				setDisabled(headerNext, track.scrollLeft >= maxScroll);
 			}
 
+			function loadVisibleImages() {
+				if (!track || dsItems.length === 0) {
+					return;
+				}
+
+				var preloadDistance = track.clientWidth * 1.5;
+				var visibleLeft = track.scrollLeft - preloadDistance;
+				var visibleRight = track.scrollLeft + track.clientWidth + preloadDistance;
+
+				dsItems.forEach(function (item) {
+					var itemLeft = item.offsetLeft;
+					var itemRight = itemLeft + item.offsetWidth;
+					if (itemRight < visibleLeft || itemLeft > visibleRight) {
+						return;
+					}
+
+					item.querySelectorAll('img[data-src]').forEach(loadImageData);
+				});
+			}
+
 			function scrollByStep(direction) {
 				var step = direction * getStep();
 				animateTrackScroll(step, isFooterProviders ? 520 : 540);
+				loadVisibleImages();
 				window.setTimeout(updateNavState, 40);
 			}
 
@@ -520,11 +547,13 @@ get_header();
 				'scroll',
 				function () {
 					updateNavState();
+					loadVisibleImages();
 				},
 				{ passive: true }
 			);
 
 			updateNavState();
+			loadVisibleImages();
 			slider.dataset.sliderInitialized = '1';
 		}
 
