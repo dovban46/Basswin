@@ -298,6 +298,7 @@ get_header();
 
 			var section = slider.closest('.section_block');
 			var track = slider.querySelector('.ds-track');
+			var isFooterProviders = slider.classList.contains('footer_providers');
 			var prevNav = slider.querySelector('.ds-prev');
 			var nextNav = slider.querySelector('.ds-next');
 			var headerNavs = section ? section.querySelectorAll('.header .slider_nav') : [];
@@ -309,6 +310,7 @@ get_header();
 			var startY = 0;
 			var startScrollLeft = 0;
 			var threshold = 8;
+			var scrollAnimationFrame = null;
 
 			if (!track) {
 				return;
@@ -317,12 +319,13 @@ get_header();
 			function getStep() {
 				var firstItem = track.querySelector('.ds-item');
 				if (!firstItem) {
-					return track.clientWidth * 0.85;
+					return track.clientWidth * 0.5;
 				}
 
 				var style = window.getComputedStyle(track);
 				var gap = parseFloat(style.columnGap || style.gap || '0');
-				return firstItem.getBoundingClientRect().width + gap;
+				var baseStep = firstItem.getBoundingClientRect().width + gap;
+				return baseStep * 2;
 			}
 
 			function setDisabled(el, disabled) {
@@ -342,11 +345,45 @@ get_header();
 			}
 
 			function scrollByStep(direction) {
-				track.scrollBy({
-					left: direction * getStep(),
-					behavior: 'smooth',
-				});
-				window.setTimeout(updateNavState, 250);
+				var step = direction * getStep();
+				animateTrackScroll(step, isFooterProviders ? 520 : 540);
+				window.setTimeout(updateNavState, 40);
+			}
+
+			function animateTrackScroll(deltaX, duration) {
+				var from = track.scrollLeft;
+				var maxScroll = Math.max(0, track.scrollWidth - track.clientWidth);
+				var to = Math.min(maxScroll, Math.max(0, from + deltaX));
+				var startTime = null;
+
+				if (scrollAnimationFrame) {
+					window.cancelAnimationFrame(scrollAnimationFrame);
+				}
+
+				function easeOutCubic(t) {
+					return 1 - Math.pow(1 - t, 3);
+				}
+
+				function stepAnimation(timestamp) {
+					if (!startTime) {
+						startTime = timestamp;
+					}
+
+					var elapsed = timestamp - startTime;
+					var progress = Math.min(1, elapsed / duration);
+					var eased = easeOutCubic(progress);
+					track.scrollLeft = from + (to - from) * eased;
+
+					if (progress < 1) {
+						scrollAnimationFrame = window.requestAnimationFrame(stepAnimation);
+					} else {
+						scrollAnimationFrame = null;
+						updateNavState();
+					}
+				}
+
+				// Apply first frame instantly to avoid click lag feeling.
+				stepAnimation(window.performance.now());
 			}
 
 			function startDrag(clientX, clientY) {
@@ -385,31 +422,45 @@ get_header();
 				}, 0);
 			}
 
-			[prevNav, headerPrev].forEach(function (button) {
+			function bindNavControl(button, direction) {
 				if (!button) {
 					return;
 				}
-				button.addEventListener('click', function (event) {
-					event.preventDefault();
-					if (button.classList.contains('disabled')) {
-						return;
-					}
-					scrollByStep(-1);
-				});
-			});
 
-			[nextNav, headerNext].forEach(function (button) {
-				if (!button) {
-					return;
-				}
-				button.addEventListener('click', function (event) {
+				var run = function (event) {
 					event.preventDefault();
 					if (button.classList.contains('disabled')) {
 						return;
 					}
-					scrollByStep(1);
+					scrollByStep(direction);
+				};
+
+				// Start on press for immediate response, not after click release.
+				button.addEventListener('mousedown', function (event) {
+					if (event.button !== 0) {
+						return;
+					}
+					run(event);
 				});
-			});
+
+				button.addEventListener(
+					'touchstart',
+					function (event) {
+						run(event);
+					},
+					{ passive: false }
+				);
+
+				// Prevent duplicate action from click after mousedown/touchstart.
+				button.addEventListener('click', function (event) {
+					event.preventDefault();
+				});
+			}
+
+			bindNavControl(prevNav, -1);
+			bindNavControl(headerPrev, -1);
+			bindNavControl(nextNav, 1);
+			bindNavControl(headerNext, 1);
 
 			track.addEventListener('mousedown', function (event) {
 				if (event.button !== 0) {
