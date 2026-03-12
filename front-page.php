@@ -99,6 +99,7 @@ get_header();
 	ob_start();
 	get_template_part( 'template-parts/home-sections' );
 	$home_sections = ob_get_clean();
+
 	// Remove possible BOM/leading whitespace before first section.
 	echo ltrim( $home_sections, "\xEF\xBB\xBF\xFEFF \t\n\r\0\x0B" );
 	?>
@@ -122,6 +123,53 @@ get_header();
 		var isPointerDown = false;
 		var isDragging = false;
 		var dragThreshold = 40;
+		var nullGameImage = '<?php echo esc_js( get_stylesheet_directory_uri() . '/Bass Win Casino/imgi_21_null_game_image.png' ); ?>';
+		var nullGameImageFile = 'imgi_21_null_game_image.png';
+
+		function isNullPlaceholder(src) {
+			return !!src && src.indexOf(nullGameImageFile) !== -1;
+		}
+
+		function disableLazyGameImages() {
+			document.querySelectorAll('.item_game .image_bg img').forEach(function (img) {
+				var src = img.getAttribute('src') || '';
+				var dataSrc = img.getAttribute('data-src') || '';
+				var cleanSrc = src && src !== '#' && !isNullPlaceholder(src) ? src : '';
+				var cleanDataSrc = dataSrc && dataSrc !== '#' && !isNullPlaceholder(dataSrc) ? dataSrc : '';
+				var chosen = cleanDataSrc || cleanSrc || '';
+
+				if (!chosen) {
+					chosen = nullGameImage;
+				}
+
+				img.setAttribute('src', chosen);
+				img.setAttribute('data-src', chosen);
+				img.classList.remove('lazyload', 'lazyloaded', 'ls-is-cached');
+				img.loading = 'eager';
+			});
+		}
+
+		function syncHoverPreviewImages() {
+			document.querySelectorAll('.item_game .image_bg').forEach(function (imageWrap) {
+				var staticImg = imageWrap.querySelector('img:not(.animated)');
+				var hoverImg = imageWrap.querySelector('img.animated');
+				if (!staticImg || !hoverImg) {
+					return;
+				}
+
+				var staticSrc = staticImg.getAttribute('src') || '';
+				var staticDataSrc = staticImg.getAttribute('data-src') || '';
+				var cleanStaticSrc = staticSrc && staticSrc !== '#' && !isNullPlaceholder(staticSrc) ? staticSrc : '';
+				var cleanStaticDataSrc = staticDataSrc && staticDataSrc !== '#' && !isNullPlaceholder(staticDataSrc) ? staticDataSrc : '';
+				var baseSrc = cleanStaticDataSrc || cleanStaticSrc;
+				if (!baseSrc || baseSrc === '#') {
+					baseSrc = nullGameImage;
+				}
+
+				hoverImg.setAttribute('src', baseSrc);
+				hoverImg.setAttribute('data-src', baseSrc);
+			});
+		}
 
 		function setSlide(nextIndex) {
 			currentIndex = nextIndex;
@@ -280,6 +328,8 @@ get_header();
 
 		setSlide(0);
 		startAutoPlay();
+		disableLazyGameImages();
+		syncHoverPreviewImages();
 
 		function loadImageData(image) {
 			if (!image) {
@@ -289,9 +339,14 @@ get_header();
 			if (!dataSrc) {
 				return;
 			}
+			if (dataSrc === '#') {
+				var existingSrc = image.getAttribute('src') || '';
+				dataSrc = existingSrc && existingSrc !== '#' ? existingSrc : nullGameImage;
+				image.setAttribute('data-src', dataSrc);
+			}
 
 			var currentSrc = image.getAttribute('src') || '';
-			if (!currentSrc || currentSrc.indexOf('/images/null_game_image.png') !== -1) {
+			if (!currentSrc || currentSrc === '#' || isNullPlaceholder(currentSrc) || currentSrc.indexOf('/images/null_game_image.png') !== -1) {
 				image.setAttribute('src', dataSrc);
 			}
 		}
@@ -560,6 +615,8 @@ get_header();
 		document.querySelectorAll('.section_block .drag-slider').forEach(function (slider) {
 			initGameSlider(slider);
 		});
+
+		syncHoverPreviewImages();
 	});
 </script>
 

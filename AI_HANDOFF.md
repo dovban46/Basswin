@@ -1,6 +1,6 @@
 # BassWin recreation handoff
 
-- Goal: recreate visual layout of `https://07basswin.com/en` inside this WordPress child theme.
+- Goal: recreate visual layout of `#` inside this WordPress child theme.
 - Current stage: header implementation started.
 - Source files used:
   - `example/header.html` (header DOM from DevTools).
